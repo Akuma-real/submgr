@@ -1,10 +1,9 @@
 import { db } from '../db'
 import type { CategoryInput } from '@/src/shared/zod/category'
-
-const DEFAULT_USER_ID = 'default_user'
+import { DEFAULT_USER_ID, ensureDefaultUser } from './user'
 
 export async function createCategory(data: CategoryInput, userId?: string) {
-  const uid = userId || DEFAULT_USER_ID
+  const uid = userId || (await ensureDefaultUser())
 
   return db.category.create({
     data: {
@@ -17,7 +16,7 @@ export async function createCategory(data: CategoryInput, userId?: string) {
 }
 
 export async function listCategories(userId?: string) {
-  const uid = userId || DEFAULT_USER_ID
+  const uid = userId || (await ensureDefaultUser())
 
   return db.category.findMany({
     where: { userId: uid },

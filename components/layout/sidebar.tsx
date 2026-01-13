@@ -3,11 +3,13 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, CreditCard, FolderOpen } from 'lucide-react'
+import { LayoutDashboard, CreditCard, FolderOpen, Users, Receipt } from 'lucide-react'
 
 const navItems = [
   { href: '/dashboard', label: '仪表盘', icon: LayoutDashboard },
   { href: '/subscriptions', label: '订阅管理', icon: CreditCard },
+  { href: '/pools', label: '拼车管理', icon: Users },
+  { href: '/billing', label: '账期管理', icon: Receipt },
   { href: '/categories', label: '分类管理', icon: FolderOpen },
 ]
 

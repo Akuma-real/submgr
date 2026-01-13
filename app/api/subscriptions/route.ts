@@ -1,21 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 import { subscriptionApiSchema } from '@/src/shared/zod/subscription'
 import { createSubscription, listSubscriptions } from '@/src/server/services/subscription'
+import { apiHandler, jsonOk, readJsonWithSchema } from '@/src/server/http'
 
-export async function GET(req: NextRequest) {
+export const GET = apiHandler(async (req: NextRequest) => {
   const includeArchived = req.nextUrl.searchParams.get('archived') === 'true'
   const subscriptions = await listSubscriptions(undefined, includeArchived)
-  return NextResponse.json(subscriptions)
-}
+  return jsonOk(subscriptions)
+})
 
-export async function POST(req: NextRequest) {
-  const body = await req.json()
-  const parsed = subscriptionApiSchema.safeParse(body)
-
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
-  }
+export const POST = apiHandler(async (req: NextRequest) => {
+  const parsed = await readJsonWithSchema(req, subscriptionApiSchema)
+  if (!parsed.ok) return parsed.response
 
   const subscription = await createSubscription(parsed.data)
-  return NextResponse.json(subscription, { status: 201 })
-}
+  return jsonOk(subscription, { status: 201 })
+})

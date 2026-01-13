@@ -2,18 +2,7 @@ import { db } from '../db'
 import { calcNextChargeDate } from '@/src/shared/dates'
 import { toMinorUnits } from '@/src/shared/money'
 import type { SubscriptionInput, SubscriptionUpdateInput } from '@/src/shared/zod/subscription'
-
-const DEFAULT_USER_ID = 'default_user'
-
-export async function ensureDefaultUser() {
-  const user = await db.user.findUnique({ where: { id: DEFAULT_USER_ID } })
-  if (!user) {
-    await db.user.create({
-      data: { id: DEFAULT_USER_ID, email: 'default@local' },
-    })
-  }
-  return DEFAULT_USER_ID
-}
+import { DEFAULT_USER_ID, ensureDefaultUser } from './user'
 
 export async function createSubscription(data: SubscriptionInput, userId?: string) {
   const uid = userId || (await ensureDefaultUser())

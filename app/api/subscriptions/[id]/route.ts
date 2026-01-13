@@ -1,49 +1,46 @@
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 import { subscriptionUpdateSchema } from '@/src/shared/zod/subscription'
 import {
   getSubscription,
   updateSubscription,
   deleteSubscription,
 } from '@/src/server/services/subscription'
+import { apiHandler, jsonError, jsonOk, readJsonWithSchema } from '@/src/server/http'
 
 type Params = { params: Promise<{ id: string }> }
 
-export async function GET(_req: NextRequest, { params }: Params) {
+export const GET = apiHandler(async (_req: NextRequest, { params }: Params) => {
   const { id } = await params
   const subscription = await getSubscription(id)
 
   if (!subscription) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    return jsonError(404, 'Not found')
   }
 
-  return NextResponse.json(subscription)
-}
+  return jsonOk(subscription)
+})
 
-export async function PUT(req: NextRequest, { params }: Params) {
+export const PUT = apiHandler(async (req: NextRequest, { params }: Params) => {
   const { id } = await params
-  const body = await req.json()
-  const parsed = subscriptionUpdateSchema.safeParse(body)
-
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
-  }
+  const parsed = await readJsonWithSchema(req, subscriptionUpdateSchema)
+  if (!parsed.ok) return parsed.response
 
   const subscription = await updateSubscription(id, parsed.data)
 
   if (!subscription) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    return jsonError(404, 'Not found')
   }
 
-  return NextResponse.json(subscription)
-}
+  return jsonOk(subscription)
+})
 
-export async function DELETE(_req: NextRequest, { params }: Params) {
+export const DELETE = apiHandler(async (_req: NextRequest, { params }: Params) => {
   const { id } = await params
   const result = await deleteSubscription(id)
 
   if (!result) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    return jsonError(404, 'Not found')
   }
 
-  return NextResponse.json({ success: true })
-}
+  return jsonOk({ success: true })
+})

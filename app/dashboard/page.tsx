@@ -4,7 +4,7 @@ import { formatMoney, fromMinorUnits } from '@/src/shared/money'
 import { convertToBase, BASE_CURRENCY } from '@/src/shared/currency'
 import { StatsCards } from '@/components/dashboard/stats-cards'
 import { UpcomingCharges } from '@/components/dashboard/upcoming-charges'
-import { ensureDefaultUser } from '@/src/server/services/subscription'
+import { ensureDefaultUser } from '@/src/server/services/user'
 
 export const dynamic = 'force-dynamic'
 

@@ -1,0 +1,148 @@
+{
+  "version": "1.0.0",
+  "timestamp": "2026-01-13T21:03:14+08:00",
+  "project": {
+    "name": "submgr",
+    "description": "订阅管理系统",
+    "language": "TypeScript",
+    "framework": "Next.js 16 (App Router)",
+    "packageManager": "pnpm"
+  },
+  "modules": [
+    {
+      "path": "app/",
+      "type": "routes",
+      "description": "Next.js 路由层（页面 + API）",
+      "entry": "layout.tsx",
+      "hasTests": false,
+      "hasConfig": false,
+      "submodules": [
+        "api/subscriptions",
+        "api/categories",
+        "api/pools",
+        "api/charges",
+        "api/tasks",
+        "dashboard",
+        "subscriptions",
+        "categories",
+        "pools",
+        "billing"
+      ]
+    },
+    {
+      "path": "components/",
+      "type": "ui",
+      "description": "可复用 UI 组件",
+      "hasTests": false,
+      "hasConfig": false,
+      "submodules": [
+        "ui",
+        "layout",
+        "dashboard",
+        "subscriptions",
+        "pools"
+      ]
+    },
+    {
+      "path": "src/server/",
+      "type": "service",
+      "description": "服务层、数据库操作、定时任务",
+      "entry": ["db.ts", "http.ts"],
+      "hasTests": false,
+      "hasConfig": false,
+      "claudeMd": "src/server/CLAUDE.md",
+      "keyFiles": [
+        "db.ts",
+        "http.ts",
+        "services/subscription.ts",
+        "services/category.ts",
+        "services/pool.ts",
+        "services/charge.ts",
+        "services/user.ts",
+        "services/notify.ts",
+        "tasks/daily.ts"
+      ]
+    },
+    {
+      "path": "src/shared/",
+      "type": "library",
+      "description": "纯业务逻辑与跨端复用代码",
+      "hasTests": false,
+      "hasConfig": false,
+      "claudeMd": "src/shared/CLAUDE.md",
+      "keyFiles": [
+        "split.ts",
+        "dates.ts",
+        "money.ts",
+        "currency.ts",
+        "zod/subscription.ts",
+        "zod/category.ts",
+        "zod/pool.ts"
+      ]
+    },
+    {
+      "path": "prisma/",
+      "type": "database",
+      "description": "数据库 schema 与迁移",
+      "entry": "schema.prisma",
+      "hasTests": false,
+      "hasConfig": true,
+      "keyFiles": [
+        "schema.prisma",
+        "migrations/"
+      ]
+    },
+    {
+      "path": "lib/",
+      "type": "utility",
+      "description": "通用工具函数",
+      "hasTests": false,
+      "hasConfig": false,
+      "keyFiles": ["utils.ts"]
+    }
+  ],
+  "coverage": {
+    "totalFiles": 61,
+    "scannedFiles": 45,
+    "percentage": 73.8,
+    "ignoredDirectories": [
+      "node_modules",
+      ".next",
+      "dist",
+      "build",
+      ".git"
+    ]
+  },
+  "gaps": {
+    "missingTests": [
+      "src/shared/split.ts",
+      "src/shared/dates.ts",
+      "src/shared/money.ts"
+    ],
+    "missingDocs": [],
+    "incompleteModules": []
+  },
+  "apiRoutes": [
+    { "path": "/api/subscriptions", "methods": ["GET", "POST"] },
+    { "path": "/api/subscriptions/[id]", "methods": ["GET", "PATCH", "DELETE"] },
+    { "path": "/api/categories", "methods": ["GET", "POST"] },
+    { "path": "/api/categories/[id]", "methods": ["GET", "PATCH", "DELETE"] },
+    { "path": "/api/pools", "methods": ["GET", "POST"] },
+    { "path": "/api/pools/[id]", "methods": ["GET", "PATCH", "DELETE"] },
+    { "path": "/api/pools/[id]/members", "methods": ["POST", "PATCH", "DELETE"] },
+    { "path": "/api/charges", "methods": ["GET", "POST"] },
+    { "path": "/api/charges/[id]", "methods": ["GET", "PATCH"] },
+    { "path": "/api/tasks/daily", "methods": ["POST"] }
+  ],
+  "dataModels": [
+    "User",
+    "Category",
+    "Subscription",
+    "Pool",
+    "PoolMember",
+    "SubscriptionCharge",
+    "PoolPeriod",
+    "PoolLine"
+  ],
+  "truncated": false
+}

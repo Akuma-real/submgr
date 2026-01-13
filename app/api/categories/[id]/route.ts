@@ -1,45 +1,42 @@
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 import { categorySchema } from '@/src/shared/zod/category'
 import { getCategory, updateCategory, deleteCategory } from '@/src/server/services/category'
+import { apiHandler, jsonError, jsonOk, readJsonWithSchema } from '@/src/server/http'
 
 type Params = { params: Promise<{ id: string }> }
 
-export async function GET(_req: NextRequest, { params }: Params) {
+export const GET = apiHandler(async (_req: NextRequest, { params }: Params) => {
   const { id } = await params
   const category = await getCategory(id)
 
   if (!category) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    return jsonError(404, 'Not found')
   }
 
-  return NextResponse.json(category)
-}
+  return jsonOk(category)
+})
 
-export async function PUT(req: NextRequest, { params }: Params) {
+export const PUT = apiHandler(async (req: NextRequest, { params }: Params) => {
   const { id } = await params
-  const body = await req.json()
-  const parsed = categorySchema.partial().safeParse(body)
-
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
-  }
+  const parsed = await readJsonWithSchema(req, categorySchema.partial())
+  if (!parsed.ok) return parsed.response
 
   const category = await updateCategory(id, parsed.data)
 
   if (!category) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    return jsonError(404, 'Not found')
   }
 
-  return NextResponse.json(category)
-}
+  return jsonOk(category)
+})
 
-export async function DELETE(_req: NextRequest, { params }: Params) {
+export const DELETE = apiHandler(async (_req: NextRequest, { params }: Params) => {
   const { id } = await params
   const result = await deleteCategory(id)
 
   if (!result) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    return jsonError(404, 'Not found')
   }
 
-  return NextResponse.json({ success: true })
-}
+  return jsonOk({ success: true })
+})
