@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String?
+  role         String   @default("user")
+  createdAt    DateTime @default(now())
+
+  categories    Category[]
+  subscriptions Subscription[]
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  color     String?
+  sortOrder Int      @default(0)
+
+  user          User           @relation(fields: [userId], references: [id])
+  subscriptions Subscription[]
+
+  @@unique([userId, name])
+}
+
+model Subscription {
+  id              String   @id @default(cuid())
+  userId          String
+  categoryId      String?
+  name            String
+  provider        String?
+  amount          Int
+  currency        String   @default("CNY")
+  billingInterval String   @default("month")
+  billingEvery    Int      @default(1)
+  anchorDate      DateTime
+  nextChargeDate  DateTime
+  isShareable     Boolean  @default(false)
+  notes           String?
+  archived        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id])
+  category Category? @relation(fields: [categoryId], references: [id])
+  pools    Pool[]
+  charges  SubscriptionCharge[]
+
+  @@index([userId, archived])
+  @@index([nextChargeDate])
+}
+
+model Pool {
+  id             String   @id @default(cuid())
+  subscriptionId String
+  title          String
+  splitType      String   @default("equal")
+  seatTotal      Int?
+  roundingMode   String   @default("minor")
+  remainderTo    String   @default("owner")
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id])
+  members      PoolMember[]
+  periods      PoolPeriod[]
+}
+
+model PoolMember {
+  id          String  @id @default(cuid())
+  poolId      String
+  displayName String
+  contact     String?
+  value       Int?
+  active      Boolean @default(true)
+
+  pool  Pool       @relation(fields: [poolId], references: [id])
+  lines PoolLine[]
+}
+
+model SubscriptionCharge {
+  id             String    @id @default(cuid())
+  subscriptionId String
+  chargeDate     DateTime
+  amount         Int
+  currency       String
+  status         String    @default("pending")
+  paidAt         DateTime?
+  createdAt      DateTime  @default(now())
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id])
+  poolPeriods  PoolPeriod[]
+
+  @@index([subscriptionId, chargeDate])
+}
+
+model PoolPeriod {
+  id          String   @id @default(cuid())
+  poolId      String
+  chargeId    String
+  periodKey   String
+  totalAmount Int
+  currency    String
+  generatedAt DateTime @default(now())
+
+  pool   Pool               @relation(fields: [poolId], references: [id])
+  charge SubscriptionCharge @relation(fields: [chargeId], references: [id])
+  lines  PoolLine[]
+
+  @@unique([poolId, chargeId])
+}
+
+model PoolLine {
+  id           String    @id @default(cuid())
+  poolPeriodId String
+  poolMemberId String
+  amountDue    Int
+  status       String    @default("pending")
+  paidAt       DateTime?
+  note         String?
+
+  poolPeriod PoolPeriod @relation(fields: [poolPeriodId], references: [id])
+  poolMember PoolMember @relation(fields: [poolMemberId], references: [id])
+}
