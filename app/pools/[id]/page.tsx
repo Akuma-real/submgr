@@ -1,15 +1,31 @@
 'use client'
 
-import { use } from 'react'
+import { use, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PoolMembers } from '@/components/pools/pool-members'
 import { SplitPreview } from '@/components/pools/split-preview'
 import { formatMoney } from '@/src/shared/money'
-import { ArrowLeft, Trash2, Users, CreditCard } from 'lucide-react'
+import { ArrowLeft, Trash2, Users, CreditCard, Pencil, Settings } from 'lucide-react'
 import { toast } from 'sonner'
 import type { RemainderTo, RoundingMode, SplitType } from '@/src/shared/zod/pool'
 import useSWR from 'swr'
@@ -51,12 +67,60 @@ export default function PoolDetailPage({ params }: { params: Promise<{ id: strin
   const { id } = use(params)
   const router = useRouter()
   const { data: pool, mutate } = useSWR<Pool>(`/api/pools/${id}`, fetcher)
+  
+  const [editOpen, setEditOpen] = useState(false)
+  const [editTitle, setEditTitle] = useState('')
+  const [editSplitType, setEditSplitType] = useState<SplitType>('equal')
+  const [editSeatTotal, setEditSeatTotal] = useState<string>('')
+  const [editRoundingMode, setEditRoundingMode] = useState<RoundingMode>('minor')
+  const [editRemainderTo, setEditRemainderTo] = useState<RemainderTo>('owner')
+  const [saving, setSaving] = useState(false)
 
   const handleDelete = async () => {
     if (!confirm('确定要删除这个拼车组吗？')) return
     await fetch(`/api/pools/${id}`, { method: 'DELETE' })
     toast.success('拼车组已删除')
     router.push('/pools')
+  }
+
+  const openEditDialog = () => {
+    if (pool) {
+      setEditTitle(pool.title)
+      setEditSplitType(pool.splitType as SplitType)
+      setEditSeatTotal(pool.seatTotal?.toString() || '')
+      setEditRoundingMode(pool.roundingMode)
+      setEditRemainderTo(pool.remainderTo)
+      setEditOpen(true)
+    }
+  }
+
+  const handleSaveEdit = async () => {
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/pools/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: editTitle,
+          splitType: editSplitType,
+          seatTotal: editSeatTotal ? parseInt(editSeatTotal) : null,
+          roundingMode: editRoundingMode,
+          remainderTo: editRemainderTo,
+        }),
+      })
+
+      if (res.ok) {
+        toast.success('拼车组已更新')
+        setEditOpen(false)
+        mutate()
+      } else {
+        toast.error('更新失败')
+      }
+    } catch {
+      toast.error('更新失败')
+    } finally {
+      setSaving(false)
+    }
   }
 
   if (!pool) {
@@ -102,10 +166,125 @@ export default function PoolDetailPage({ params }: { params: Promise<{ id: strin
             </div>
           </div>
         </div>
-        <Button variant="destructive" size="sm" onClick={handleDelete}>
-          <Trash2 className="mr-2 h-4 w-4" />
-          删除拼车组
-        </Button>
+        <div className="flex gap-2">
+          <Dialog open={editOpen} onOpenChange={setEditOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" onClick={openEditDialog}>
+                <Pencil className="mr-2 h-4 w-4" />
+                编辑设置
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  编辑拼车组设置
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-title">拼车组名称</Label>
+                  <Input
+                    id="edit-title"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    placeholder="Netflix 家庭组"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>分摊方式</Label>
+                  <Select
+                    value={editSplitType}
+                    onValueChange={(v) => setEditSplitType(v as SplitType)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="equal">平均分摊</SelectItem>
+                      <SelectItem value="fixed">固定金额</SelectItem>
+                      <SelectItem value="ratio">按比例</SelectItem>
+                      <SelectItem value="seat">按席位</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {editSplitType === 'seat' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-seatTotal">总席位数</Label>
+                    <Input
+                      id="edit-seatTotal"
+                      type="number"
+                      min="1"
+                      value={editSeatTotal}
+                      onChange={(e) => setEditSeatTotal(e.target.value)}
+                      placeholder="留空则按实际成员数"
+                    />
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>舍入方式</Label>
+                    <Select
+                      value={editRoundingMode}
+                      onValueChange={(v) => setEditRoundingMode(v as RoundingMode)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="minor">按最小单位分配</SelectItem>
+                        <SelectItem value="floor">向下取整</SelectItem>
+                        <SelectItem value="ceil">向上取整</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>余数归属</Label>
+                    <Select
+                      value={editRemainderTo}
+                      onValueChange={(v) => setEditRemainderTo(v as RemainderTo)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="owner">主账号</SelectItem>
+                        <SelectItem value="first">第一位成员</SelectItem>
+                        <SelectItem value="last">最后一位成员</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setEditOpen(false)}
+                  >
+                    取消
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={handleSaveEdit}
+                    disabled={saving || !editTitle.trim()}
+                  >
+                    {saving ? '保存中...' : '保存修改'}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+          
+          <Button variant="destructive" size="sm" onClick={handleDelete}>
+            <Trash2 className="mr-2 h-4 w-4" />
+            删除
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
