@@ -21,8 +21,10 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
-import { Plus, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, FolderOpen, Palette } from 'lucide-react'
 
 interface Category {
   id: string
@@ -31,9 +33,15 @@ interface Category {
   sortOrder: number
 }
 
+const PRESET_COLORS = [
+  '#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6',
+  '#3b82f6', '#6366f1', '#a855f7', '#ec4899', '#64748b',
+]
+
 export default function CategoriesPage() {
   const router = useRouter()
   const [categories, setCategories] = useState<Category[]>([])
+  const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [name, setName] = useState('')
@@ -42,7 +50,10 @@ export default function CategoriesPage() {
   const fetchCategories = () => {
     fetch('/api/categories')
       .then((res) => res.json())
-      .then(setCategories)
+      .then((data) => {
+        setCategories(data)
+        setLoading(false)
+      })
   }
 
   useEffect(() => {
@@ -50,13 +61,18 @@ export default function CategoriesPage() {
   }, [])
 
   const handleSubmit = async () => {
+    if (!name.trim()) {
+      toast.error('请输入分类名称')
+      return
+    }
+
     const url = editingId ? `/api/categories/${editingId}` : '/api/categories'
     const method = editingId ? 'PUT' : 'POST'
 
     const res = await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, color }),
+      body: JSON.stringify({ name: name.trim(), color }),
     })
 
     if (res.ok) {
@@ -100,10 +116,49 @@ export default function CategoriesPage() {
     }
   }
 
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-10 w-10 rounded-lg" />
+            <div className="space-y-2">
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-4 w-20" />
+            </div>
+          </div>
+          <Skeleton className="h-10 w-28" />
+        </div>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-24" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-14 w-full" />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">分类管理</h1>
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+            <FolderOpen className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">分类管理</h1>
+            <p className="text-sm text-muted-foreground">
+              共 {categories.length} 个分类
+            </p>
+          </div>
+        </div>
         <Dialog open={dialogOpen} onOpenChange={handleOpenChange}>
           <DialogTrigger asChild>
             <Button>
@@ -126,19 +181,36 @@ export default function CategoriesPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="color">颜色</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="color"
-                    type="color"
-                    value={color}
-                    onChange={(e) => setColor(e.target.value)}
-                    className="w-16 h-10 p-1"
-                  />
+                <Label>颜色</Label>
+                <div className="flex flex-wrap gap-2">
+                  {PRESET_COLORS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setColor(c)}
+                      className={`w-8 h-8 rounded-full transition-all ${
+                        color === c ? 'ring-2 ring-offset-2 ring-primary scale-110' : ''
+                      }`}
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                </div>
+                <div className="flex gap-2 mt-2">
+                  <div className="flex items-center gap-2">
+                    <Palette className="h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="color"
+                      type="color"
+                      value={color}
+                      onChange={(e) => setColor(e.target.value)}
+                      className="w-12 h-10 p-1 cursor-pointer"
+                    />
+                  </div>
                   <Input
                     value={color}
                     onChange={(e) => setColor(e.target.value)}
                     placeholder="#3b82f6"
+                    className="flex-1"
                   />
                 </div>
               </div>
@@ -150,14 +222,20 @@ export default function CategoriesPage() {
         </Dialog>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>分类列表</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {categories.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">暂无分类</p>
-          ) : (
+      {categories.length === 0 ? (
+        <EmptyState
+          icon={FolderOpen}
+          title="暂无分类"
+          description="创建分类来更好地组织和管理你的订阅"
+          actionLabel="创建第一个分类"
+          onAction={() => setDialogOpen(true)}
+        />
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>分类列表</CardTitle>
+          </CardHeader>
+          <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -168,16 +246,16 @@ export default function CategoriesPage() {
               </TableHeader>
               <TableBody>
                 {categories.map((cat) => (
-                  <TableRow key={cat.id}>
+                  <TableRow key={cat.id} className="group">
                     <TableCell>
                       <div
-                        className="w-6 h-6 rounded"
+                        className="w-8 h-8 rounded-lg shadow-sm"
                         style={{ backgroundColor: cat.color || '#gray' }}
                       />
                     </TableCell>
                     <TableCell className="font-medium">{cat.name}</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
+                      <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button
                           variant="ghost"
                           size="icon"
@@ -190,7 +268,7 @@ export default function CategoriesPage() {
                           size="icon"
                           onClick={() => handleDelete(cat.id)}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>
                     </TableCell>
@@ -198,9 +276,9 @@ export default function CategoriesPage() {
                 ))}
               </TableBody>
             </Table>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

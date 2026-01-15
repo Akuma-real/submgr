@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
 import { PoolMembers } from '@/components/pools/pool-members'
 import { SplitPreview } from '@/components/pools/split-preview'
 import { formatMoney } from '@/src/shared/money'
-import { ArrowLeft, Trash2 } from 'lucide-react'
+import { ArrowLeft, Trash2, Users, CreditCard } from 'lucide-react'
 import { toast } from 'sonner'
 import type { RemainderTo, RoundingMode, SplitType } from '@/src/shared/zod/pool'
 import useSWR from 'swr'
@@ -59,7 +60,20 @@ export default function PoolDetailPage({ params }: { params: Promise<{ id: strin
   }
 
   if (!pool) {
-    return <div className="text-center py-10">加载中...</div>
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-9 w-9" />
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-6 w-20" />
+        </div>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Skeleton className="h-40 rounded-xl" />
+          <Skeleton className="h-40 rounded-xl" />
+        </div>
+        <Skeleton className="h-60 rounded-xl" />
+      </div>
+    )
   }
 
   const activeMembers = pool.members.filter((m) => m.active)
@@ -71,44 +85,57 @@ export default function PoolDetailPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => router.push('/pools')}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => router.push('/pools')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-2xl font-bold">{pool.title}</h1>
-          <Badge variant="secondary">
-            {SPLIT_TYPE_LABELS[pool.splitType] || pool.splitType}
-          </Badge>
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Users className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold">{pool.title}</h1>
+              <Badge variant="secondary" className="mt-1">
+                {SPLIT_TYPE_LABELS[pool.splitType] || pool.splitType}
+              </Badge>
+            </div>
+          </div>
         </div>
         <Button variant="destructive" size="sm" onClick={handleDelete}>
           <Trash2 className="mr-2 h-4 w-4" />
-          删除
+          删除拼车组
         </Button>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader>
-            <CardTitle>订阅信息</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <CreditCard className="h-4 w-4 text-primary" />
+              订阅信息
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">订阅名称</span>
-              <span>{pool.subscription.name}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">金额</span>
-              <span className="font-medium">
-                {formatMoney(pool.subscription.amount, pool.subscription.currency)}
-              </span>
+          <CardContent>
+            <div className="p-4 rounded-lg bg-muted/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <CreditCard className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <div className="font-medium">{pool.subscription.name}</div>
+                  <div className="text-2xl font-bold text-primary mt-1">
+                    {formatMoney(pool.subscription.amount, pool.subscription.currency)}
+                  </div>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>分摊预览</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">分摊预览</CardTitle>
           </CardHeader>
           <CardContent>
             <SplitPreview
@@ -125,8 +152,14 @@ export default function PoolDetailPage({ params }: { params: Promise<{ id: strin
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>成员管理</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" />
+            成员管理
+            <Badge variant="secondary" className="ml-2">
+              {activeMembers.length} 人
+            </Badge>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <PoolMembers

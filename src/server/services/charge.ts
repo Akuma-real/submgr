@@ -102,3 +102,81 @@ export async function markLineWaived(lineId: string, note?: string) {
     data: { status: 'waived', note },
   })
 }
+
+export interface MonthlySpending {
+  month: string
+  amount: number
+  currency: string
+}
+
+export async function getMonthlySpending(months: number = 6): Promise<MonthlySpending[]> {
+  const now = new Date()
+  const startDate = new Date(now.getFullYear(), now.getMonth() - months + 1, 1)
+
+  const charges = await db.subscriptionCharge.findMany({
+    where: {
+      chargeDate: { gte: startDate },
+    },
+    select: {
+      chargeDate: true,
+      amount: true,
+      currency: true,
+    },
+    orderBy: { chargeDate: 'asc' },
+  })
+
+  // Group by month
+  const grouped = new Map<string, { amount: number; currency: string }>()
+  
+  for (const charge of charges) {
+    const monthKey = `${charge.chargeDate.getFullYear()}年${charge.chargeDate.getMonth() + 1}月`
+    const existing = grouped.get(monthKey)
+    if (existing) {
+      existing.amount += charge.amount
+    } else {
+      grouped.set(monthKey, { amount: charge.amount, currency: charge.currency })
+    }
+  }
+
+  // Convert to array
+  const result: MonthlySpending[] = []
+  for (const [month, data] of grouped.entries()) {
+    result.push({ month, amount: data.amount, currency: data.currency })
+  }
+
+  return result
+}
+
+export interface YearlyStats {
+  totalSpent: number
+  totalCharges: number
+  avgMonthly: number
+  currency: string
+}
+
+export async function getYearlyStats(): Promise<YearlyStats> {
+  const now = new Date()
+  const startOfYear = new Date(now.getFullYear(), 0, 1)
+
+  const charges = await db.subscriptionCharge.findMany({
+    where: {
+      chargeDate: { gte: startOfYear },
+    },
+    select: {
+      amount: true,
+      currency: true,
+    },
+  })
+
+  const totalSpent = charges.reduce((sum, c) => sum + c.amount, 0)
+  const totalCharges = charges.length
+  const monthsElapsed = now.getMonth() + 1
+  const avgMonthly = monthsElapsed > 0 ? Math.round(totalSpent / monthsElapsed) : 0
+
+  return {
+    totalSpent,
+    totalCharges,
+    avgMonthly,
+    currency: charges[0]?.currency || 'CNY',
+  }
+}
